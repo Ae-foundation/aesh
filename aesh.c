@@ -45,6 +45,7 @@ int (*aesh_func[]) (char **) = {
 
 char *hist[HIST_SIZE];
 int hist_c = 0;
+int hist_p = -1;
 
 int 
 aesh_num_all() 
@@ -137,16 +138,17 @@ ath(char *line)
     hist_c--;
   }
   hist[hist_c++] = strdup(line);
+  hist_p = -1;
 }
 
-
-char 
+char
 *aesh_rl() 
 {
   int bufs = RL_BUFS;
   int pos = 0;
   char *buff = malloc(bufs);
   int c;
+  char *c_hist = NULL; // Для хранения текущей команды при редактировании
 
   if (!buff) {
     fprintf(stderr, "aesh: alloc err\n");
@@ -167,22 +169,46 @@ char
       tcsetattr(0, TCSANOW, &old);
       putchar('\n');
       if (pos > 0) ath(buff);
+      hist_p = -1; // reset
       return buff;
     } else if (c == 27) { // ESC
       if (getchar() == '[') {
-        if (getchar() == 'A' && hist_c > 0) { // UP
-          strncpy(buff, hist[hist_c-1], bufs);
-          pos = strlen(buff);
-          printf("\r# %s", buff);
-          fflush(stdout);
+        int arrow = getchar();
+        if (arrow == 'A') { // UP
+          if (hist_p < hist_c - 1) {
+            hist_p++;
+            c_hist = hist[hist_c - 1 - hist_p];
+            strncpy(buff, c_hist, bufs-1);
+            buff[bufs-1] = '\0';
+            pos = strlen(buff);
+            printf("\r# %s", buff);
+            fflush(stdout);
+          }
+        } else if (arrow == 'B') { // DOWN
+          if (hist_p > 0) {
+            hist_p--;
+            c_hist = hist[hist_c - 1 - hist_p];
+            strncpy(buff, c_hist, bufs-1);
+            buff[bufs-1] = '\0';
+            pos = strlen(buff);
+            printf("\r# %s", buff);
+            fflush(stdout);
+          } else if (hist_p == 0) {
+            hist_p = -1;
+            pos = 0;
+            buff[0] = '\0';
+            printf("\r# ");
+            fflush(stdout);
+          }
         }
       }
     } else if (c >= 32 && c < 127) {
       buff[pos++] = c;
       putchar(c);
+      fflush(stdout);
     }
 
-    if (pos >= bufs) {
+    if (pos >= bufs-1) {
       bufs += RL_BUFS;
       buff = realloc(buff, bufs);
       if (!buff) {
