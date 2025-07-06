@@ -27,6 +27,9 @@
 #define TOK_BUFS 64
 #define TOK_DELIM " \t\r\n\a"
 
+/* master get array length (num elements) */
+#define ARRLEN(x) (sizeof(x)/sizeof((x)[0]))
+
 int aesh_cd(char **);
 int aesh_help(char **);
 int aesh_exit(char **);
@@ -48,12 +51,6 @@ int hist_c = 0;
 int hist_p = -1;
 
 int 
-aesh_num_all() 
-{
-  return sizeof(aesh_str) / sizeof(char *);
-}
-
-int 
 aesh_cd(char **args) 
 {
   if (args[1] == NULL) {
@@ -73,7 +70,7 @@ aesh_help(char **args)
   puts("aesh - ae shell written on c");
   puts("commands:");
 
-  for (i = 0; i < aesh_num_all(); i++) {
+  for (i = 0; i < ARRLEN(aesh_str); i++) {
     printf("  %s\n", aesh_str[i]);
   }
 
@@ -118,7 +115,7 @@ aesh_exec(char **args)
     return EXIT_FAILURE;
   }
 
-  for (i = 0; i < aesh_num_all(); i++) {
+  for (i = 0; i < ARRLEN(aesh_str); i++) {
     if (strcmp(args[0], aesh_str[i]) == 0) {
       return (*aesh_func[i])(args);
     }
