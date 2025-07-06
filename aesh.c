@@ -1,5 +1,4 @@
-/*
- * Copyright (C) 2025 kurumihere(fuck)
+/*  Copyright (C) 2025 kurumihere(fuck)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -21,10 +20,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <termios.h>
 
-int aesh_cd(char **args);
-int aesh_help(char **args);
-int aesh_exit(char **args);
+#define HIST_SIZE 100
+#define RL_BUFS 1024
+#define TOK_BUFS 64
+#define TOK_DELIM " \t\r\n\a"
+
+int aesh_cd(char **);
+int aesh_help(char **);
+int aesh_exit(char **);
 
 char *aesh_str[] = {
   "cd",
@@ -32,12 +37,14 @@ char *aesh_str[] = {
   "exit"
 };
 
-int 
-(*aesh_func[]) (char **) = {
+int (*aesh_func[]) (char **) = {
   &aesh_cd,
   &aesh_help,
   &aesh_exit
 };
+
+char *hist[HIST_SIZE];
+int hist_c = 0;
 
 int 
 aesh_num_all() 
@@ -46,7 +53,7 @@ aesh_num_all()
 }
 
 int 
-aesh_cd(char **args)
+aesh_cd(char **args) 
 {
   if (args[1] == NULL) {
     fprintf(stderr, "aesh: error\n");
@@ -59,7 +66,7 @@ aesh_cd(char **args)
 }
 
 int 
-aesh_help(char **args)
+aesh_help(char **args) 
 {
   int i;
   puts("aesh - ae shell written on c");
@@ -73,13 +80,13 @@ aesh_help(char **args)
 }
 
 int 
-aesh_exit(char **args)
+aesh_exit(char **args) 
 {
   return EXIT_SUCCESS;
 }
 
 int 
-aesh_launch(char **args)
+aesh_launch(char **args) 
 {
   pid_t pid;
   int status;
@@ -93,7 +100,6 @@ aesh_launch(char **args)
   } else if (pid < 0) {
     perror("aesh");
   } else {
-
     do {
       waitpid(pid, &status, WUNTRACED);
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
@@ -103,7 +109,7 @@ aesh_launch(char **args)
 }
 
 int 
-aesh_exec(char **args)
+aesh_exec(char **args) 
 {
   int i;
 
@@ -120,48 +126,64 @@ aesh_exec(char **args)
   return aesh_launch(args);
 }
 
-char 
-*aesh_rl(void)
+void 
+ath(char *line) 
 {
-#ifdef AESH_USE_STD_GETLINE
-  char *line = NULL;
-  ssize_t bufs = 0;
-  if (getline(&line, &bufs, stdin) == -1) {
-    if (feof(stdin)) {
-      exit(EXIT_SUCCESS);
-    } else  {
-      perror("aesh: getline\n");
-      exit(EXIT_FAILURE);
+  if (hist_c >= HIST_SIZE) {
+    free(hist[0]);
+    for (int i = 0; i < HIST_SIZE-1; i++) {
+      hist[i] = hist[i+1];
     }
+    hist_c--;
   }
-  return line;
-#else
-#define AESH_RL_BUFS 1024
-  int bufs = AESH_RL_BUFS;
+  hist[hist_c++] = strdup(line);
+}
+
+
+char 
+*aesh_rl() 
+{
+  int bufs = RL_BUFS;
   int pos = 0;
-  char *buff = malloc(sizeof(char) * bufs);
+  char *buff = malloc(bufs);
   int c;
 
   if (!buff) {
     fprintf(stderr, "aesh: alloc err\n");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
+
+  struct termios old, new;
+  tcgetattr(0, &old);
+  new = old;
+  new.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr(0, TCSANOW, &new);
 
   while (1) {
     c = getchar();
 
-    if (c == EOF) {
-      exit(EXIT_SUCCESS);
-    } else if (c == '\n') {
+    if (c == EOF || c == '\n') {
       buff[pos] = '\0';
+      tcsetattr(0, TCSANOW, &old);
+      putchar('\n');
+      if (pos > 0) ath(buff);
       return buff;
-    } else {
-      buff[pos] = c;
+    } else if (c == 27) { // ESC
+      if (getchar() == '[') {
+        if (getchar() == 'A' && hist_c > 0) { // UP
+          strncpy(buff, hist[hist_c-1], bufs);
+          pos = strlen(buff);
+          printf("\r# %s", buff);
+          fflush(stdout);
+        }
+      }
+    } else if (c >= 32 && c < 127) {
+      buff[pos++] = c;
+      putchar(c);
     }
-    pos++;
 
     if (pos >= bufs) {
-      bufs += AESH_RL_BUFS;
+      bufs += RL_BUFS;
       buff = realloc(buff, bufs);
       if (!buff) {
         fprintf(stderr, "aesh: alloc err\n");
@@ -169,48 +191,42 @@ char
       }
     }
   }
-#endif
 }
 
-#define AESH_TOK_BUFS 64
-#define AESH_TOK_DELIM " \t\r\n\a"
-
 char 
-**aesh_sl(char *line)
+**aesh_sl(char *line) 
 {
-  int bufs = AESH_TOK_BUFS, pos = 0;
+  int bufs = TOK_BUFS, pos = 0;
   char **tkns = malloc(bufs * sizeof(char*));
-  char *tkn, **tkns_bckp;
+  char *tkn;
 
   if (!tkns) {
     fprintf(stderr, "aesh: alloc err\n");
     exit(EXIT_FAILURE);
   }
 
-  tkn = strtok(line, AESH_TOK_DELIM);
+  tkn = strtok(line, TOK_DELIM);
   while (tkn != NULL) {
     tkns[pos] = tkn;
     pos++;
 
     if (pos >= bufs) {
-      bufs += AESH_TOK_BUFS;
-      tkns_bckp = tkns;
+      bufs += TOK_BUFS;
       tkns = realloc(tkns, bufs * sizeof(char*));
       if (!tkns) {
-		free(tkns_bckp);
         fprintf(stderr, "aesh: alloc err\n");
         exit(EXIT_FAILURE);
       }
     }
 
-    tkn = strtok(NULL, AESH_TOK_DELIM);
+    tkn = strtok(NULL, TOK_DELIM);
   }
   tkns[pos] = NULL;
   return tkns;
 }
 
 void 
-aesh_loop(void)
+aesh_loop() 
 {
   char *line;
   char **args;
@@ -228,7 +244,7 @@ aesh_loop(void)
 }
 
 int 
-main(int argc, char **argv)
+main(int argc, char **argv) 
 {
   aesh_loop();
   return EXIT_SUCCESS;
