@@ -284,6 +284,8 @@ aesh_loop()
 int 
 main(int argc, char **argv) 
 {
+  setenv("SHELL", argv[0], 1);
+
   char* home = getenv("HOME");
   char rcfile[64];
   snprintf(rcfile, 64, "%s/.aeshrc", home);
