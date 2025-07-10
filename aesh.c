@@ -40,6 +40,12 @@ char *aesh_str[] = {
   "exit"
 };
 
+char *aesh_str_desc[] = {
+  "Change directory",
+  "Show help",
+  "Exit from the shell"
+};
+
 int (*aesh_func[]) (char **) = {
   &aesh_cd,
   &aesh_help,
@@ -73,7 +79,7 @@ aesh_help(char **args)
   puts("commands:");
 
   for (i = 0; i < ARRLEN(aesh_str); i++) {
-    printf("  %s\n", aesh_str[i]);
+    printf("  %s\t\t%s\n", aesh_str[i], aesh_str_desc[i]);
   }
 
   return EXIT_FAILURE;
@@ -181,7 +187,7 @@ char
             strncpy(buff, c_hist, bufs-1);
             buff[bufs-1] = '\0';
             pos = strlen(buff);
-            printf("\r# %s", buff);
+            printf("\r%s%s", Prompt, buff);
             fflush(stdout);
           }
         } else if (arrow == 'B') { // DOWN
@@ -191,13 +197,13 @@ char
             strncpy(buff, c_hist, bufs-1);
             buff[bufs-1] = '\0';
             pos = strlen(buff);
-            printf("\r# %s", buff);
+            printf("\r%s%s", Prompt, buff);
             fflush(stdout);
           } else if (hist_p == 0) {
             hist_p = -1;
             pos = 0;
             buff[0] = '\0';
-            printf("\r# ");
+            printf("\r%s", Prompt);
             fflush(stdout);
           }
         }
@@ -209,7 +215,7 @@ char
     } else if (c == 4) {
       buff[0] = '\0';
       tcsetattr(0, TCSANOW, &old);
-      putchar('\n');
+      puts("^D");
       hist_p = -1; // reset
       return buff;
     }
@@ -278,6 +284,24 @@ aesh_loop()
 int 
 main(int argc, char **argv) 
 {
+  char* home = getenv("HOME");
+  char rcfile[64];
+  snprintf(rcfile, 64, "%s/.aeshrc", home);
+  FILE* rc = fopen(rcfile, "r");
+  if (!rc) {
+    perror("aerc: ~/.aeshrc");
+    return EXIT_FAILURE;
+  }
+  char rcline[512];
+  char **rcargs;
+  int rcstat;
+
+  while (fgets(rcline, 512, rc)) {
+    rcargs = aesh_sl(rcline);
+    rcstat = aesh_exec(rcargs);
+  }
+  fclose(rc);
+
   aesh_loop();
   return EXIT_SUCCESS;
 }
