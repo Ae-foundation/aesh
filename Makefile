@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -Wall -g -O3
+CFLAGS += -Wall --std=gnu89 -g -O3
 TARGET = aesh
 
 all: $(TARGET)
@@ -9,3 +9,4 @@ $(TARGET): aesh.c
 
 clean: 
 	rm -f ${TARGET}
+

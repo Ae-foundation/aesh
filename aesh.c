@@ -50,6 +50,8 @@ char *hist[HIST_SIZE];
 int hist_c = 0;
 int hist_p = -1;
 
+char* Prompt = "# ";
+
 int 
 aesh_cd(char **args) 
 {
@@ -129,7 +131,8 @@ ath(char *line)
 {
   if (hist_c >= HIST_SIZE) {
     free(hist[0]);
-    for (int i = 0; i < HIST_SIZE-1; i++) {
+    int i;
+    for (i = 0; i < HIST_SIZE-1; i++) {
       hist[i] = hist[i+1];
     }
     hist_c--;
@@ -203,6 +206,12 @@ char
       buff[pos++] = c;
       putchar(c);
       fflush(stdout);
+    } else if (c == 4) {
+      buff[0] = '\0';
+      tcsetattr(0, TCSANOW, &old);
+      putchar('\n');
+      hist_p = -1; // reset
+      return buff;
     }
 
     if (pos >= bufs-1) {
@@ -256,7 +265,7 @@ aesh_loop()
   int status;
 
   do {
-    printf("# ");
+    printf(Prompt);
     line = aesh_rl();
     args = aesh_sl(line);
     status = aesh_exec(args);
@@ -272,3 +281,4 @@ main(int argc, char **argv)
   aesh_loop();
   return EXIT_SUCCESS;
 }
+
