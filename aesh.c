@@ -33,23 +33,33 @@
 int aesh_cd(char **);
 int aesh_help(char **);
 int aesh_exit(char **);
+int aesh_set(char **);
+int aesh_get(char **);
+
+char* home;
 
 char *aesh_str[] = {
   "cd",
   "help",
-  "exit"
+  "exit",
+  "set",
+  "get"
 };
 
 char *aesh_str_desc[] = {
   "Change directory",
   "Show help",
-  "Exit from the shell"
+  "Exit from the shell",
+  "Set env var",
+  "Get env var"
 };
 
 int (*aesh_func[]) (char **) = {
   &aesh_cd,
   &aesh_help,
-  &aesh_exit
+  &aesh_exit,
+  &aesh_set,
+  &aesh_get
 };
 
 char *hist[HIST_SIZE];
@@ -62,7 +72,9 @@ int
 aesh_cd(char **args) 
 {
   if (args[1] == NULL) {
-    fprintf(stderr, "aesh: error\n");
+    if (chdir(home) != 0) {
+      perror("aesh");
+    }
   } else {
     if (chdir(args[1]) != 0) {
       perror("aesh");
@@ -89,6 +101,29 @@ int
 aesh_exit(char **args) 
 {
   return EXIT_SUCCESS;
+}
+
+int 
+aesh_set(char **args) 
+{
+  if (!args[2]) {
+    fputs("set: incorrect usage\nusage: get <var> <value>\n", stderr);
+    return EXIT_FAILURE;
+  }
+  setenv(args[1], args[2], 1);
+  return EXIT_FAILURE;
+}
+
+int 
+aesh_get(char **args) 
+{
+  if (!args[1]) {
+    fputs("get: incorrect usage\nusage: get <var>\n", stderr);
+    return EXIT_FAILURE;
+  }
+  char* v = getenv(args[1]);
+  if (v) puts(v);
+  return EXIT_FAILURE;
 }
 
 int 
@@ -271,7 +306,7 @@ aesh_loop()
   int status;
 
   do {
-    printf(Prompt);
+    fputs(Prompt, stdout);
     line = aesh_rl();
     args = aesh_sl(line);
     status = aesh_exec(args);
@@ -284,9 +319,16 @@ aesh_loop()
 int 
 main(int argc, char **argv) 
 {
-  setenv("SHELL", argv[0], 1);
+  if (argc > 1) {
+    if (!strcmp(argv[1], "--version")) {
+      puts("aesh 1.0");
+      return 1;
+    }
+  }
 
-  char* home = getenv("HOME");
+  setenv("SHELL", "aesh", 1);
+
+  home = getenv("HOME");
   char rcfile[64];
   snprintf(rcfile, 64, "%s/.aeshrc", home);
   FILE* rc = fopen(rcfile, "r");
