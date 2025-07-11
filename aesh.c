@@ -100,6 +100,8 @@ aesh_help(char **args)
 int 
 aesh_exit(char **args) 
 {
+  puts("AEEEE! ae ae AEEE");
+  puts("aee");
   return EXIT_SUCCESS;
 }
 
@@ -243,7 +245,7 @@ char
           }
         }
       }
-    } else if (c >= 32 && c < 127) {
+    } else if (c >= 32 && c < 255) {
       buff[pos++] = c;
       putchar(c);
       fflush(stdout);
@@ -342,7 +344,7 @@ main(int argc, char **argv)
 
   while (fgets(rcline, 512, rc)) {
     rcargs = aesh_sl(rcline);
-    rcstat = aesh_exec(rcargs);
+    rcstat = aesh_exec(rcargs); // не юзается да???
   }
   fclose(rc);
 
