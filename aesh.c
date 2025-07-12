@@ -113,7 +113,7 @@ int
 aesh_clear(char **args) 
 {
   fputs("\033[H\033[2J", stdout);
-  return EXIT_SUCCESS;
+  return EXIT_FAILURE;
 }
 
 int 
