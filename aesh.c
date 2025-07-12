@@ -35,6 +35,7 @@ int aesh_help(char **);
 int aesh_exit(char **);
 int aesh_set(char **);
 int aesh_get(char **);
+int aesh_clear(char **);
 
 char* home;
 
@@ -43,7 +44,8 @@ char *aesh_str[] = {
   "help",
   "exit",
   "set",
-  "get"
+  "get",
+  "clear"
 };
 
 char *aesh_str_desc[] = {
@@ -51,7 +53,8 @@ char *aesh_str_desc[] = {
   "Show help",
   "Exit from the shell",
   "Set env var",
-  "Get env var"
+  "Get env var",
+  "Clear the terminal (because of aeterm bah)"
 };
 
 int (*aesh_func[]) (char **) = {
@@ -59,7 +62,8 @@ int (*aesh_func[]) (char **) = {
   &aesh_help,
   &aesh_exit,
   &aesh_set,
-  &aesh_get
+  &aesh_get,
+  &aesh_clear
 };
 
 char *hist[HIST_SIZE];
@@ -102,6 +106,13 @@ aesh_exit(char **args)
 {
   puts("AEEEE! ae ae AEEE");
   puts("aee");
+  return EXIT_SUCCESS;
+}
+
+int 
+aesh_clear(char **args) 
+{
+  fputs("\033[H\033[2J", stdout);
   return EXIT_SUCCESS;
 }
 
