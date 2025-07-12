@@ -1,4 +1,5 @@
--============= Aesh =============-
-Usage:
-  To use aesh, copy default aeshrc to ~/.aeshrc, and start aesh
+Aesh
+====
 
+Usage:
+	To use aesh, copy default aeshrc to ~/.aeshrc, and start aesh

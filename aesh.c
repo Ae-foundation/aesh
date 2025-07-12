@@ -1,17 +1,17 @@
 /*  Copyright (C) 2025 kurumihere(fuck)
  * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or (at your option) any later version.
  * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
  * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <sys/wait.h>
@@ -91,7 +91,7 @@ int
 aesh_help(char **args) 
 {
   int i;
-  puts("aesh - ae shell written on c");
+  puts("aesh - ae shell written in c");
   puts("commands:");
 
   for (i = 0; i < ARRLEN(aesh_str); i++) {
@@ -202,7 +202,7 @@ char
   int pos = 0;
   char *buff = malloc(bufs);
   int c;
-  char *c_hist = NULL; // Для хранения текущей команды при редактировании
+  char *c_hist = NULL;
 
   if (!buff) {
     fprintf(stderr, "aesh: alloc err\n");
@@ -264,7 +264,7 @@ char
       buff[0] = '\0';
       tcsetattr(0, TCSANOW, &old);
       puts("^D");
-      hist_p = -1; // reset
+      hist_p = -1;
       return buff;
     }
 
@@ -355,8 +355,8 @@ main(int argc, char **argv)
 
   while (fgets(rcline, 512, rc)) {
     rcargs = aesh_sl(rcline);
-    rcstat = aesh_exec(rcargs); // не юзается да???
-  }
+    rcstat = aesh_exec(rcargs);
+ }
   fclose(rc);
 
   aesh_loop();
