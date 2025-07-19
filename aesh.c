@@ -14,13 +14,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <termios.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 
 #define HIST_SIZE 100
 #define RL_BUFS 1024
@@ -66,6 +67,44 @@ int (*aesh_func[]) (char **) = {
   &aesh_clear
 };
 
+char *mesg[] = {
+  0,
+  "operation not permitted",
+  "no such file or directory",
+  "no such process",
+  "interrupted syscall",
+  "input/output error",
+  "no such device or address",
+  "argument list exceeds limit",
+  "file format is not executable",
+  "bad file descriptor",
+  "no child processes are running",
+  "try again later",
+  "no free memory left",
+  "permission denied",
+  "bad address",
+  "block device required",
+  "device is busy",
+  "file already exists",
+  "symlink across multiple devices",
+  "no such device",
+  "not a directory",
+  "is a directory",
+  "invalid argument",
+  "file table overflow",
+  "file descriptor count overflow (> 255)",
+  "not a tty",
+  "the file is busy",
+  "the file is too large",
+  "no space left on disk",
+  "illegal file seek",
+  "read-only filesystem",
+  "too many symlinks",
+  "broken pipe",
+  "math domain error",
+  "math result not representable"
+};
+
 char *hist[HIST_SIZE];
 int hist_c = 0;
 int hist_p = -1;
@@ -77,11 +116,11 @@ aesh_cd(char **args)
 {
   if (args[1] == NULL) {
     if (chdir(home) != 0) {
-      perror("aesh");
+      printf("aesh: %s: %s\n", home, mesg[errno]);
     }
   } else {
     if (chdir(args[1]) != 0) {
-      perror("aesh");
+      printf("aesh: %s: %s\n", args[1], mesg[errno]);
     }
   }
   return EXIT_FAILURE;
@@ -148,11 +187,11 @@ aesh_launch(char **args)
   pid = fork();
   if (pid == 0) {
     if (execvp(args[0], args) == -1) {
-      perror("aesh");
+      printf("aesh: %s: %s\n", args[0], mesg[errno]);
     }
     exit(EXIT_FAILURE);
   } else if (pid < 0) {
-    perror("aesh");
+    printf("aesh: %s\n", mesg[errno]);
   } else {
     do {
       waitpid(pid, &status, WUNTRACED);
@@ -346,7 +385,7 @@ main(int argc, char **argv)
   snprintf(rcfile, 64, "%s/.aeshrc", home);
   FILE* rc = fopen(rcfile, "r");
   if (!rc) {
-    perror("aerc: ~/.aeshrc");
+    printf("aesh: ~/.aeshrc: %s\n", mesg[errno]);
     return EXIT_FAILURE;
   }
   char rcline[512];
