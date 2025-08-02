@@ -404,6 +404,7 @@ main(argc, argv)
   while (fgets(rcline, 512, rc)) {
     rcargs = aesh_sl(rcline);
     rcstat = aesh_exec(rcargs);
+    free(rcargs);
   }
   fclose(rc);
 
