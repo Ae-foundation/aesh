@@ -14,15 +14,15 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <string.h>
 #include <termios.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <stdio.h>
 
 #define HISTSZ 100
 #define RLBUFS 1024
@@ -34,12 +34,19 @@
 /* master get array length (num elements) */
 #define ARRLEN(x) (sizeof(x)/sizeof((x)[0]))
 
-aesh_cd(char **);
-aesh_help(char **);
-aesh_exit(char **);
-aesh_set(char **);
-aesh_get(char **);
-aesh_clear(char **);
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wreturn-type"
+  #pragma GCC diagnostic ignored "-Wimplicit-int"
+
+int aesh_cd(char **);
+int aesh_help(char **);
+int aesh_exit(char **);
+int aesh_set(char **);
+int aesh_get(char **);
+int aesh_clear(char **);
+
+char *strdup(char *s);
+int setenv(char *name, char *value, int overwrite);
 
 char* home;
 
@@ -126,7 +133,7 @@ aesh_cd(args)
       printf("aesh: %s: %s\n", args[1], mesg[errno]);
     }
   }
-  return(EXIT_FAILURE);
+  return(1);
 }
 
 aesh_help(args)
@@ -140,7 +147,7 @@ aesh_help(args)
     printf("  %s\t\t%s\n", aesh_str[i], aesh_str_desc[i]);
   }
 
-  return(EXIT_FAILURE);
+  return(1);
 }
 
 aesh_exit(args)
@@ -148,14 +155,14 @@ aesh_exit(args)
 {
   puts("AEEEE! ae ae AEEE");
   puts("aee");
-  return(EXIT_SUCCESS);
+  return(0);
 }
 
 aesh_clear(args)
   char** args;
 {
   fputs("\033[H\033[2J", stdout);
-  return(EXIT_FAILURE);
+  return(1);
 }
 
 aesh_set(args)
@@ -163,10 +170,10 @@ aesh_set(args)
 {
   if (!args[2]) {
     fputs("set: incorrect usage\nusage: get <var> <value>\n", stderr);
-    return(EXIT_FAILURE);
+    return(1);
   }
   setenv(args[1], args[2], 1);
-  return(EXIT_FAILURE);
+  return(1);
 }
 
 aesh_get(args)
@@ -175,11 +182,11 @@ aesh_get(args)
   char* v;
   if (!args[1]) {
     fputs("get: incorrect usage\nusage: get <var>\n", stderr);
-    return(EXIT_FAILURE);
+    return(1);
   }
   v = getenv(args[1]);
   if (v) puts(v);
-  return(EXIT_FAILURE);
+  return(1);
 }
 
 aesh_launch(args)
@@ -193,7 +200,7 @@ aesh_launch(args)
     if (execvp(args[0], args) == -1) {
       printf("aesh: %s: %s\n", args[0], mesg[errno]);
     }
-    exit(EXIT_FAILURE);
+    exit(1);
   } else if (pid < 0) {
     printf("aesh: %s\n", mesg[errno]);
   } else {
@@ -202,7 +209,7 @@ aesh_launch(args)
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
   }
 
-  return(EXIT_FAILURE);
+  return(1);
 }
 
 aesh_exec(args)
@@ -211,7 +218,7 @@ aesh_exec(args)
   int i;
 
   if (args[0] == NULL) {
-    return(EXIT_FAILURE);
+    return(1);
   }
 
   for (i = 0; i < ARRLEN(aesh_str); i++) {
@@ -317,7 +324,7 @@ char
       buff = realloc(buff, bufs);
       if (!buff) {
         fprintf(stderr, "aesh: alloc err\n");
-        exit(EXIT_FAILURE);
+        exit(1);
       }
     }
   }
@@ -333,7 +340,7 @@ char
 
   if (!tkns) {
     fprintf(stderr, "aesh: alloc err\n");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
   tkn = strtok(line, TKDELIM);
@@ -346,7 +353,7 @@ char
       tkns = realloc(tkns, bufs * sizeof(char*));
       if (!tkns) {
         fprintf(stderr, "aesh: alloc err\n");
-        exit(EXIT_FAILURE);
+        exit(1);
       }
     }
 
@@ -392,15 +399,16 @@ main(argc, argv)
   /* Read ~/.aeshrc */
   home = getenv("HOME");
   char rcfile[64];
-  snprintf(rcfile, 64, "%s/.aeshrc", home);
+  sprintf(rcfile, "%s/.aeshrc", home);
   FILE* rc = fopen(rcfile, "r");
   if (!rc) {
     printf("aesh: ~/.aeshrc: %s\n", mesg[errno]);
-    return(EXIT_FAILURE);
+    return(1);
   }
   char rcline[512];
   char **rcargs;
-  int rcstat=0;
+  int rcstat;
+  rcstat=rcstat; /* Anything but no warnings lol */
   while (fgets(rcline, 512, rc)) {
     rcargs = aesh_sl(rcline);
     rcstat = aesh_exec(rcargs);
@@ -410,6 +418,8 @@ main(argc, argv)
 
   /* Start aesh */
   aesh_loop();
-  return(EXIT_SUCCESS);
+  return(0);
 }
+
+  #pragma GCC diagnostic pop
 
