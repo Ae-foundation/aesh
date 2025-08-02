@@ -15,28 +15,31 @@
  */
 
 #include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <string.h>
 #include <termios.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <stdio.h>
 
-#define HIST_SIZE 100
-#define RL_BUFS 1024
-#define TOK_BUFS 64
-#define TOK_DELIM " \t\r\n\a"
+#define HISTSZ 100
+#define RLBUFS 1024
+#define TKBUFS 64
+#define TKDELIM " \t\r\n"
+
+#define PROMPT getenv("PS1")
 
 /* master get array length (num elements) */
 #define ARRLEN(x) (sizeof(x)/sizeof((x)[0]))
 
-int aesh_cd(char **);
-int aesh_help(char **);
-int aesh_exit(char **);
-int aesh_set(char **);
-int aesh_get(char **);
-int aesh_clear(char **);
+aesh_cd(char **);
+aesh_help(char **);
+aesh_exit(char **);
+aesh_set(char **);
+aesh_get(char **);
+aesh_clear(char **);
 
 char* home;
 
@@ -105,14 +108,14 @@ char *mesg[] = {
   "math result not representable"
 };
 
-char *hist[HIST_SIZE];
+char *hist[HISTSZ];
 int hist_c = 0;
 int hist_p = -1;
 
-char* Prompt = "# ";
+char* promp = "# ";
 
-int 
-aesh_cd(char **args) 
+aesh_cd(args)
+  char** args;
 {
   if (args[1] == NULL) {
     if (chdir(home) != 0) {
@@ -123,11 +126,11 @@ aesh_cd(char **args)
       printf("aesh: %s: %s\n", args[1], mesg[errno]);
     }
   }
-  return EXIT_FAILURE;
+  return(EXIT_FAILURE);
 }
 
-int 
-aesh_help(char **args) 
+aesh_help(args)
+  char** args;
 {
   int i;
   puts("aesh - ae shell written in c");
@@ -137,49 +140,50 @@ aesh_help(char **args)
     printf("  %s\t\t%s\n", aesh_str[i], aesh_str_desc[i]);
   }
 
-  return EXIT_FAILURE;
+  return(EXIT_FAILURE);
 }
 
-int 
-aesh_exit(char **args) 
+aesh_exit(args)
+  char** args;
 {
   puts("AEEEE! ae ae AEEE");
   puts("aee");
-  return EXIT_SUCCESS;
+  return(EXIT_SUCCESS);
 }
 
-int 
-aesh_clear(char **args) 
+aesh_clear(args)
+  char** args;
 {
   fputs("\033[H\033[2J", stdout);
-  return EXIT_FAILURE;
+  return(EXIT_FAILURE);
 }
 
-int 
-aesh_set(char **args) 
+aesh_set(args)
+  char** args;
 {
   if (!args[2]) {
     fputs("set: incorrect usage\nusage: get <var> <value>\n", stderr);
-    return EXIT_FAILURE;
+    return(EXIT_FAILURE);
   }
   setenv(args[1], args[2], 1);
-  return EXIT_FAILURE;
+  return(EXIT_FAILURE);
 }
 
-int 
-aesh_get(char **args) 
+aesh_get(args)
+  char** args;
 {
+  char* v;
   if (!args[1]) {
     fputs("get: incorrect usage\nusage: get <var>\n", stderr);
-    return EXIT_FAILURE;
+    return(EXIT_FAILURE);
   }
-  char* v = getenv(args[1]);
+  v = getenv(args[1]);
   if (v) puts(v);
-  return EXIT_FAILURE;
+  return(EXIT_FAILURE);
 }
 
-int 
-aesh_launch(char **args) 
+aesh_launch(args)
+  char** args;
 {
   pid_t pid;
   int status;
@@ -198,49 +202,50 @@ aesh_launch(char **args)
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
   }
 
-  return EXIT_FAILURE;
+  return(EXIT_FAILURE);
 }
 
-int 
-aesh_exec(char **args) 
+aesh_exec(args)
+  char** args;
 {
   int i;
 
   if (args[0] == NULL) {
-    return EXIT_FAILURE;
+    return(EXIT_FAILURE);
   }
 
   for (i = 0; i < ARRLEN(aesh_str); i++) {
     if (strcmp(args[0], aesh_str[i]) == 0) {
-      return (*aesh_func[i])(args);
+      return((*aesh_func[i])(args));
     }
   }
 
-  return aesh_launch(args);
+  return(aesh_launch(args));
 }
 
-void 
-ath(char *line) 
+ath(line)
+  char* line;
 {
-  if (hist_c >= HIST_SIZE) {
+  int i;
+  if (hist_c >= HISTSZ) {
     free(hist[0]);
-    int i;
-    for (i = 0; i < HIST_SIZE-1; i++) {
+    for (i = 0; i < HISTSZ-1; i++) {
       hist[i] = hist[i+1];
     }
     hist_c--;
   }
   hist[hist_c++] = strdup(line);
   hist_p = -1;
+  return(0);
 }
 
 char
 *aesh_rl() 
 {
-  int bufs = RL_BUFS;
+  int bufs = RLBUFS;
   int pos = 0;
+  int c, arrow;
   char *buff = malloc(bufs);
-  int c;
   char *c_hist = NULL;
 
   if (!buff) {
@@ -262,35 +267,35 @@ char
       tcsetattr(0, TCSANOW, &old);
       putchar('\n');
       if (pos > 0) ath(buff);
-      hist_p = -1; // reset
-      return buff;
-    } else if (c == 27) { // ESC
+      hist_p = -1; /* reset */
+      return(buff);
+    } else if (c == 27) { /* ESC */
       if (getchar() == '[') {
-        int arrow = getchar();
-        if (arrow == 'A') { // UP
+        arrow = getchar();
+        if (arrow == 'A') { /* UP */
           if (hist_p < hist_c - 1) {
             hist_p++;
             c_hist = hist[hist_c - 1 - hist_p];
             strncpy(buff, c_hist, bufs-1);
             buff[bufs-1] = '\0';
             pos = strlen(buff);
-            printf("\r%s%s", Prompt, buff);
+            printf("\r%s%s", PROMPT, buff);
             fflush(stdout);
           }
-        } else if (arrow == 'B') { // DOWN
+        } else if (arrow == 'B') { /* DOWN */
           if (hist_p > 0) {
             hist_p--;
             c_hist = hist[hist_c - 1 - hist_p];
             strncpy(buff, c_hist, bufs-1);
             buff[bufs-1] = '\0';
             pos = strlen(buff);
-            printf("\r%s%s", Prompt, buff);
+            printf("\r%s%s", PROMPT, buff);
             fflush(stdout);
           } else if (hist_p == 0) {
             hist_p = -1;
             pos = 0;
             buff[0] = '\0';
-            printf("\r%s", Prompt);
+            printf("\r%s", PROMPT);
             fflush(stdout);
           }
         }
@@ -304,11 +309,11 @@ char
       tcsetattr(0, TCSANOW, &old);
       puts("^D");
       hist_p = -1;
-      return buff;
+      return(buff);
     }
 
     if (pos >= bufs-1) {
-      bufs += RL_BUFS;
+      bufs += RLBUFS;
       buff = realloc(buff, bufs);
       if (!buff) {
         fprintf(stderr, "aesh: alloc err\n");
@@ -319,9 +324,10 @@ char
 }
 
 char 
-**aesh_sl(char *line) 
+**aesh_sl(line)
+  char* line;
 {
-  int bufs = TOK_BUFS, pos = 0;
+  int bufs = TKBUFS, pos = 0;
   char **tkns = malloc(bufs * sizeof(char*));
   char *tkn;
 
@@ -330,13 +336,13 @@ char
     exit(EXIT_FAILURE);
   }
 
-  tkn = strtok(line, TOK_DELIM);
+  tkn = strtok(line, TKDELIM);
   while (tkn != NULL) {
     tkns[pos] = tkn;
     pos++;
 
     if (pos >= bufs) {
-      bufs += TOK_BUFS;
+      bufs += TKBUFS;
       tkns = realloc(tkns, bufs * sizeof(char*));
       if (!tkns) {
         fprintf(stderr, "aesh: alloc err\n");
@@ -344,13 +350,12 @@ char
       }
     }
 
-    tkn = strtok(NULL, TOK_DELIM);
+    tkn = strtok(NULL, TKDELIM);
   }
   tkns[pos] = NULL;
-  return tkns;
+  return(tkns);
 }
 
-void 
 aesh_loop() 
 {
   char *line;
@@ -358,7 +363,7 @@ aesh_loop()
   int status;
 
   do {
-    fputs(Prompt, stdout);
+    fputs(PROMPT, stdout);
     line = aesh_rl();
     args = aesh_sl(line);
     status = aesh_exec(args);
@@ -366,39 +371,44 @@ aesh_loop()
     free(line);
     free(args);
   } while (status);
+  return(0);
 }
 
-int 
-main(int argc, char **argv) 
+main(argc, argv)
+  int argc;
+  char** argv;
 {
   if (argc > 1) {
     if (!strcmp(argv[1], "--version")) {
       puts("aesh 1.0");
-      return 1;
+      return(1);
     }
   }
 
+  /* Set environment variables */
   setenv("SHELL", "aesh", 1);
+  setenv("PS1", promp, 1);
 
+  /* Read ~/.aeshrc */
   home = getenv("HOME");
   char rcfile[64];
   snprintf(rcfile, 64, "%s/.aeshrc", home);
   FILE* rc = fopen(rcfile, "r");
   if (!rc) {
     printf("aesh: ~/.aeshrc: %s\n", mesg[errno]);
-    return EXIT_FAILURE;
+    return(EXIT_FAILURE);
   }
   char rcline[512];
   char **rcargs;
-  int rcstat;
-
+  int rcstat=0;
   while (fgets(rcline, 512, rc)) {
     rcargs = aesh_sl(rcline);
     rcstat = aesh_exec(rcargs);
- }
+  }
   fclose(rc);
 
+  /* Start aesh */
   aesh_loop();
-  return EXIT_SUCCESS;
+  return(EXIT_SUCCESS);
 }
 

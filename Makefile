@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -Wall --std=gnu89 -g -O3 -static
+CFLAGS += -Wall --std=c89 -g -O3 -static -Wtraditional
 TARGET = aesh
 
 all: $(TARGET)
