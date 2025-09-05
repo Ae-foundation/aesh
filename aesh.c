@@ -307,7 +307,7 @@ char
           }
         }
       }
-    } else if (c >= 32 && c < 255) {
+    } else if ((c >= 32 && c <= 126) || (c >= 128 && c <= 255)) {
       buff[pos++] = c;
       putchar(c);
       fflush(stdout);
@@ -402,19 +402,19 @@ main(argc, argv)
   sprintf(rcfile, "%s/.aeshrc", home);
   FILE* rc = fopen(rcfile, "r");
   if (!rc) {
-    printf("aesh: ~/.aeshrc: %s\n", mesg[errno]);
-    return(1);
+    printf("~/.aeshrc: %s\n", mesg[errno]);
+  } else {
+    char rcline[512];
+    char **rcargs;
+    int rcstat;
+    rcstat=rcstat; /* Anything but no warnings lol */
+    while (fgets(rcline, 512, rc)) {
+      rcargs = aesh_sl(rcline);
+      rcstat = aesh_exec(rcargs);
+      free(rcargs);
+    }
+    fclose(rc);
   }
-  char rcline[512];
-  char **rcargs;
-  int rcstat;
-  rcstat=rcstat; /* Anything but no warnings lol */
-  while (fgets(rcline, 512, rc)) {
-    rcargs = aesh_sl(rcline);
-    rcstat = aesh_exec(rcargs);
-    free(rcargs);
-  }
-  fclose(rc);
 
   /* Start aesh */
   aesh_loop();
