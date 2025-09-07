@@ -45,8 +45,13 @@ int aesh_set(char **);
 int aesh_get(char **);
 int aesh_clear(char **);
 
-char *strdup(char *s);
-int setenv(char *name, char *value, int overwrite);
+#if defined(__FreeBSD__)
+  char *strdup(const char *s);
+  int setenv(const char *name, const char *value, int overwrite);
+#else
+  char *strdup(char *s);
+  int setenv(char *name, char *value, int overwrite);
+#endif
 
 char* home;
 
